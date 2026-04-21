@@ -1,6 +1,11 @@
+// Utility: vector length, avoid relying on Vec::len() naming
+static inline double vec_len(const Vec& v){
+    return std::sqrt(v.x*v.x + v.y*v.y);
+}
+
 // Utility: clamp vector magnitude to max_len (if needed)
 static inline Vec clamp_vec(const Vec& v, double max_len){
-    double L = v.len();
+    double L = vec_len(v);
     if (L <= 1e-12) return Vec(0,0);
     if (L <= max_len) return v;
     double k = max_len / L;
@@ -16,7 +21,7 @@ static inline Vec clamp_vec(const Vec& v, double max_len){
 Vec Controller::get_v_next() {
     // If already effectively at target, keep current velocity minimal to avoid churn
     Vec to_tar = pos_tar - pos_cur;
-    double dist = to_tar.len();
+    double dist = vec_len(to_tar);
 
     // small threshold relative to radius to avoid oscillation near target
     double arrive_eps = r * 0.1;
@@ -39,7 +44,7 @@ Vec Controller::get_v_next() {
     Vec v_des(0,0);
     if (dist > arrive_eps) {
         // unit direction to target
-        if (dist > 1e-12) v_des = to_tar * (1.0 / dist) * desired_speed;
+        if (dist > 1e-12) v_des = to_tar * (desired_speed / dist);
     } else {
         // close enough: gently brake
         v_des = Vec(0,0);
@@ -56,7 +61,7 @@ Vec Controller::get_v_next() {
             Vec pj = monitor->get_pos_cur(j);
             double rj = monitor->get_r(j);
             Vec d = pos_cur - pj;
-            double L = d.len();
+            double L = vec_len(d);
             double safe = r + rj; // touching distance
             if (L < 1e-9) {
                 // identical position: push arbitrarily outward with small magnitude
