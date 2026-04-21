@@ -20,6 +20,7 @@ static inline Vec clamp_vec(const Vec& v, double max_len){
 
 class Controller {
 public:
+    // State exposed by framework
     Vec pos_cur;
     Vec v_cur;
     Vec pos_tar;
@@ -27,6 +28,14 @@ public:
     double v_max;
     int id;
     Monitor* monitor;
+
+    // Constructed by Robot with (pos_tar, v_max, r, id, monitor)
+    Controller(const Vec& _pos_tar, double _v_max, double _r, int _id, Monitor* _monitor)
+        : pos_cur(0,0), v_cur(0,0), pos_tar(_pos_tar), r(_r), v_max(_v_max), id(_id), monitor(_monitor) {}
+
+    // Robot calls these each step to update observable state
+    void set_v_cur(const Vec& v) { v_cur = v; }
+    void set_pos_cur(const Vec& p) { pos_cur = p; }
 
     Vec get_v_next();
 };
