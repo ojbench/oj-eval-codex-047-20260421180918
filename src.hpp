@@ -18,7 +18,20 @@ static inline Vec clamp_vec(const Vec& v, double max_len){
 // - Slow down when very close to the target to avoid overshoot jitter.
 // This focuses on safety and simplicity; the judge performs collision checks.
 
-Vec Controller::get_v_next() {
+class Controller {
+public:
+    Vec pos_cur;
+    Vec v_cur;
+    Vec pos_tar;
+    double r;
+    double v_max;
+    int id;
+    Monitor* monitor;
+
+    Vec get_v_next();
+};
+
+inline Vec Controller::get_v_next() {
     // If already effectively at target, keep current velocity minimal to avoid churn
     Vec to_tar = pos_tar - pos_cur;
     double dist = vec_len(to_tar);
