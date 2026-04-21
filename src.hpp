@@ -1,36 +1,3 @@
-// OJ 2284 - 迅影的机器人
-// Baseline controller implementing a conservative velocity policy.
-// The OJ will include Vec, Monitor, TIME_INTERVAL, etc. We only implement Controller::get_v_next().
-
-#pragma once
-
-struct Vec { // fallback to satisfy local static analysis; OJ provides real version
-    double x, y;
-    Vec(double x_=0, double y_=0): x(x_), y(y_) {}
-    Vec operator+(const Vec& o) const { return Vec(x+o.x, y+o.y); }
-    Vec operator-(const Vec& o) const { return Vec(x-o.x, y-o.y); }
-    Vec operator*(double k) const { return Vec(x*k, y*k); }
-    Vec operator/(double k) const { return Vec(x/k, y/k); }
-    double len() const { return std::sqrt(x*x + y*y); }
-};
-
-class Monitor; // forward decl; real definition is provided by OJ
-
-class Controller {
-public:
-    // Exposed by framework (read-only in our logic):
-    Vec pos_cur;    // current position
-    Vec v_cur;      // current velocity
-    Vec pos_tar;    // target position
-    double r;       // radius
-    double v_max;   // max speed
-    int id;         // robot id (0-based)
-    Monitor* monitor; // global monitor for observing others
-
-    // Decide the velocity for next interval.
-    Vec get_v_next();
-};
-
 // Utility: clamp vector magnitude to max_len (if needed)
 static inline Vec clamp_vec(const Vec& v, double max_len){
     double L = v.len();
@@ -46,36 +13,27 @@ static inline Vec clamp_vec(const Vec& v, double max_len){
 // - Slow down when very close to the target to avoid overshoot jitter.
 // This focuses on safety and simplicity; the judge performs collision checks.
 
-#include <cmath>
-#include <vector>
-
-// Declarations that match expected Monitor API (only signatures we call).
-class Monitor {
-public:
-    bool get_speeding(int) const;
-    std::vector<int> get_collision(int) const;
-    bool get_warning() const;
-    Vec get_pos_cur(int) const;
-    Vec get_v_cur(int) const;
-    double get_r(int) const;
-    bool get_done() const;
-    int get_robot_number() const;
-    int get_test_id() const;
-};
-
 Vec Controller::get_v_next() {
     // If already effectively at target, keep current velocity minimal to avoid churn
     Vec to_tar = pos_tar - pos_cur;
     double dist = to_tar.len();
 
     // small threshold relative to radius to avoid oscillation near target
-    double arrive_eps = std::max(1e-3, r * 0.1);
+    double arrive_eps = r * 0.1;
+    if (arrive_eps < 1e-3) arrive_eps = 1e-3;
 
     // Desired speed scaling: slow down when close
     double desired_speed = v_max;
-    if (dist < 5 * r + 1e-9) {
-        // Linearly scale down within 5 radii
-        desired_speed = v_max * std::max(0.0, dist / std::max(1e-9, 5 * r));
+    {
+        double horizon = 5 * r;
+        if (horizon < 1e-9) horizon = 1e-9;
+        if (dist < horizon) {
+            double ratio = dist / horizon;
+            if (ratio < 0.0) ratio = 0.0;
+            if (ratio > 1.0) ratio = 1.0;
+            // Linearly scale down within 5 radii
+            desired_speed = v_max * ratio;
+        }
     }
 
     Vec v_des(0,0);
@@ -122,4 +80,3 @@ Vec Controller::get_v_next() {
 
     return v_next;
 }
-
